@@ -1,0 +1,6 @@
+Name        : IMAPI 2 Wrapper
+Description : .NET Wrapper for Windows IMAPI2 Interface.
+
+Provides a simple and CLI conformant implementation of the IMAPI2 interface for use in managed code. Credit goes to Eric Haddan for creating the IMAPI2 interop file and demonstration of how to use the API. His original source and demonstration can be found below.
+
+http://www.codeproject.com/Articles/22538/Burning-CD-DVD-Media-with-the-Image-Mastering-API
