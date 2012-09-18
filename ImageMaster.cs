@@ -14,11 +14,11 @@ namespace IMAPI2
     public class ImageMaster : IDisposable
     {
         private const string ClientName = "IMAPI2 Wrapper";
-
+        
         private ReadOnlySelectableCollection<DiscRecorder> _recorders;
         private bool _isWriting;
         private long _mediaCapacity;
-        private bool _mediaLoaded;        
+        private bool _mediaLoaded;
         private PhysicalMedia _media;
         private ReadOnlyCollection<MediaState> _mediaStates;
         private List<IMediaNode> _nodes;
@@ -60,11 +60,11 @@ namespace IMAPI2
         }
 
         public ImageMaster()
-        {
-            List<DiscRecorder> recorders = new List<DiscRecorder>();            
+        {            
+            List<DiscRecorder> recorders = new List<DiscRecorder>();
             _media = PhysicalMedia.Unknown;
             _nodes = new List<IMediaNode>();
-            _mediaStates = new ReadOnlyCollection<MediaState>(new List<MediaState> {MediaState.Unknown});
+            _mediaStates = new ReadOnlyCollection<MediaState>(new List<MediaState> { MediaState.Unknown });
 
             MsftDiscMaster2 discMaster = null;
             try
@@ -163,11 +163,13 @@ namespace IMAPI2
             if (!_mediaLoaded)
                 throw new InvalidOperationException("LoadMedia must be called first.");
 
-            IDiscRecorder2 recorder = _recorders.SelectedItem.Internal;
+            MsftDiscRecorder2 recorder = null;
             MsftDiscFormat2Erase discFormatErase = null;
 
             try
             {
+                recorder = new MsftDiscRecorder2();
+                recorder.InitializeDiscRecorder(_recorders.SelectedItem.InternalUniqueId);
                 discFormatErase = new MsftDiscFormat2Erase
                 {
                     Recorder = recorder,
@@ -183,6 +185,7 @@ namespace IMAPI2
             finally
             {
                 if (discFormatErase != null) Marshal.ReleaseComObject(discFormatErase);
+                if (recorder != null) Marshal.ReleaseComObject(recorder);
             }
         }
 
@@ -196,15 +199,14 @@ namespace IMAPI2
             if (_recorders.SelectedIndex == -1)
                 throw new InvalidOperationException("No DiscRecorder selected on the DiscRecorders list.");
 
-            MsftDiscRecorder2 recorder = _recorders.SelectedItem.Internal;
+            MsftDiscRecorder2 recorder = null;
             MsftFileSystemImage image = null;
             MsftDiscFormat2Data format = null;
 
             try
             {
-                //
-                // Create and initialize the IDiscFormat2Data
-                //
+                recorder = new MsftDiscRecorder2();
+                recorder.InitializeDiscRecorder(_recorders.SelectedItem.InternalUniqueId);
                 format = new MsftDiscFormat2Data();
                 if (!format.IsCurrentMediaSupported(recorder))
                     throw new MediaNotSupportedException("There is no media in the device.");
@@ -214,7 +216,7 @@ namespace IMAPI2
                 //
                 format.Recorder = recorder;
                 _media = (PhysicalMedia)format.CurrentPhysicalMediaType;
-                                
+
                 mediaStateFlags = (long)format.CurrentMediaStatus;
                 foreach (MediaState state in Enum.GetValues(typeof(MediaState)))
                 {
@@ -229,7 +231,7 @@ namespace IMAPI2
                 //
                 // Create a file system and select the media type
                 //
-                image = new MsftFileSystemImage();                
+                image = new MsftFileSystemImage();
                 image.ChooseImageDefaultsForMediaType((IMAPI_MEDIA_PHYSICAL_TYPE)_media);
 
                 //
@@ -246,8 +248,9 @@ namespace IMAPI2
             }
             finally
             {
-                if (format != null) Marshal.ReleaseComObject(format);
                 if (image != null) Marshal.ReleaseComObject(image);
+                if (format != null) Marshal.ReleaseComObject(format);
+                if (recorder != null) Marshal.ReleaseComObject(recorder);
             }
         }
 
@@ -256,14 +259,13 @@ namespace IMAPI2
             if (_recorders.SelectedIndex == -1)
                 throw new InvalidOperationException("No DiscRecorder selected from the DiscRecorders list.");
 
-            var recorder = _recorders.SelectedItem.Internal;
-
-            //
-            // Verify recorder is supported
-            //
+            MsftDiscRecorder2 recorder = null;
             IDiscFormat2Data discFormatData = null;
             try
             {
+                recorder = new MsftDiscRecorder2();
+                recorder.InitializeDiscRecorder(_recorders.SelectedItem.InternalUniqueId);
+
                 discFormatData = new MsftDiscFormat2Data();
                 switch (discFormatData.IsRecorderSupported(recorder))
                 {
@@ -277,10 +279,8 @@ namespace IMAPI2
             }
             finally
             {
-                if (discFormatData != null)
-                {
-                    Marshal.ReleaseComObject(discFormatData);
-                }
+                if (discFormatData != null) Marshal.ReleaseComObject(discFormatData);
+                if (recorder != null) Marshal.ReleaseComObject(recorder);
             }
         }
 
@@ -294,7 +294,8 @@ namespace IMAPI2
 
             try
             {
-                recorder = _recorders.SelectedItem.Internal;
+                recorder = new MsftDiscRecorder2();
+                recorder.InitializeDiscRecorder(_recorders.SelectedItem.InternalUniqueId);
 
                 discFormatData = new MsftDiscFormat2Data
                     {
@@ -333,22 +334,18 @@ namespace IMAPI2
                 }
                 finally
                 {
-                    if (fileSystem != null)
-                    {
-                        Marshal.FinalReleaseComObject(fileSystem);
-                    }
+                    if (fileSystem != null) Marshal.FinalReleaseComObject(fileSystem);                    
                 }
 
                 discFormatData.Update -= _discFormatWrite_Update;
 
-                if (eject)
-                    recorder.EjectMedia();
+                if (eject) recorder.EjectMedia();
             }
             finally
             {
-                if (recorder != null) Marshal.ReleaseComObject(recorder);
-                if (discFormatData != null) Marshal.ReleaseComObject(discFormatData);
                 _isWriting = false;
+                if (discFormatData != null) Marshal.ReleaseComObject(discFormatData);
+                if (recorder != null) Marshal.ReleaseComObject(recorder);                
             }
         }
 
@@ -371,7 +368,7 @@ namespace IMAPI2
             if ((_writerThread != null) && (_writerThread.IsAlive)) _writerThread.Join();
             foreach (DiscRecorder recorder in _recorders)
             {
-                Marshal.ReleaseComObject(recorder.Internal);
+                Marshal.ReleaseComObject(recorder.InternalUniqueId);
             }
         }
     }

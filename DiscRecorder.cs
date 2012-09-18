@@ -6,14 +6,14 @@ using System.Runtime.InteropServices;
 
 namespace IMAPI2
 {
-    public class DiscRecorder : IDisposable
+    public class DiscRecorder
     {
-        private MsftDiscRecorder2 _internal;
+        private string _internalUniqueId;
         private ReadOnlyCollection<MediaProfile> _profiles;
 
-        internal MsftDiscRecorder2 Internal
+        internal string InternalUniqueId
         {
-            get { return _internal; }
+            get { return _internalUniqueId; }
         }
         public ReadOnlyCollection<MediaProfile> SupportedProfiles
         {
@@ -22,16 +22,25 @@ namespace IMAPI2
 
         internal DiscRecorder(string uniqueId)
         {
-            List<MediaProfile> profiles;
-            _internal = new MsftDiscRecorder2();
-            _internal.InitializeDiscRecorder(uniqueId);
-
-            profiles = new List<MediaProfile>();
-            foreach (IMAPI_PROFILE_TYPE item in _internal.SupportedProfiles)
+            _internalUniqueId = uniqueId;
+            MsftDiscRecorder2 recorder = null;
+            try
             {
-                profiles.Add((MediaProfile)item);
+                List<MediaProfile> profiles;
+                recorder = new MsftDiscRecorder2();
+                recorder.InitializeDiscRecorder(uniqueId);
+
+                profiles = new List<MediaProfile>();
+                foreach (IMAPI_PROFILE_TYPE item in recorder.SupportedProfiles)
+                {
+                    profiles.Add((MediaProfile)item);
+                }
+                _profiles = profiles.AsReadOnly();
             }
-            _profiles = profiles.AsReadOnly();
+            finally
+            {
+                if (recorder != null) Marshal.ReleaseComObject(recorder);
+            }
         }
 
         private static string _GetProfileText(IMAPI_PROFILE_TYPE profileType)
@@ -103,9 +112,5 @@ namespace IMAPI2
             }
         }
 
-        void IDisposable.Dispose()
-        {
-            if (_internal != null) Marshal.ReleaseComObject(_internal);
-        }
     }
 }

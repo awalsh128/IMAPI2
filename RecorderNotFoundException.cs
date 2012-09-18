@@ -5,9 +5,9 @@ using System.Text;
 
 namespace IMAPI2
 {
-    public class RecorderNotSupportedException : NotSupportedException
+    public class RecorderNotFoundException : RecorderNotSupportedException
     {
-        public RecorderNotSupportedException(string message)
+        public RecorderNotFoundException(string message)
             : base(message)
         {            
         }
